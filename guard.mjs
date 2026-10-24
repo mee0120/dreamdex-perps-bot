@@ -40,6 +40,7 @@ const REDUCE_FRACTION = Number(cfg("GUARD_REDUCE_FRACTION", "0.5"))
 const SLIPPAGE_PCT = Number(cfg("GUARD_SLIPPAGE_PCT", "0.5"))
 const INTERVAL_SEC = Number(cfg("GUARD_INTERVAL_SEC", "15"))
 const COOLDOWN_SEC = Number(cfg("GUARD_COOLDOWN_SEC", "60"))
+const HEARTBEAT_MIN = Number(cfg("GUARD_HEARTBEAT_MIN", "10")) // status line at least this often
 const DISCORD = cfg("DISCORD_WEBHOOK_URL", "")
 const TG_TOKEN = cfg("TELEGRAM_BOT_TOKEN", "")
 const TG_CHAT = cfg("TELEGRAM_CHAT_ID", "")
@@ -75,8 +76,20 @@ const abs = (x) => (x < 0n ? -x : x)
 const floorTo = (v, s) => (s > 0n ? (v / s) * s : v)
 const ceilTo = (v, s) => (s > 0n ? ((v + s - 1n) / s) * s : v)
 const num = (v, d) => Number(formatUnits(v, d))
-const ts = () => new Date().toISOString().replace("T", " ").slice(0, 19)
+const ts = () => new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC"
 const cooldown = new Map() // pool -> unix ms until which no new action
+const watching = new Map() // pool -> "L|S:size" of positions already announced
+let lastStateKey = ""
+let lastStatusAt = 0
+
+// trigger prices for a position, in quote units (for the "now guarding" alert)
+function triggers(m, pos) {
+  const entry = num(pos.avgEntryPrice, m.quoteDecimals)
+  const long = pos.size > 0n
+  const sl = SL_PCT > 0 ? entry * (1 + (long ? -SL_PCT : SL_PCT) / 100) : null
+  const tp = TP_PCT > 0 ? entry * (1 + (long ? TP_PCT : -TP_PCT) / 100) : null
+  return { entry, sl, tp }
+}
 
 function log(msg) {
   const line = `[${ts()}] ${msg}`
@@ -156,9 +169,37 @@ async function check() {
     const move = (num(mark, m.quoteDecimals) / num(pos.avgEntryPrice, m.quoteDecimals) - 1) * 100 * (pos.size > 0n ? 1 : -1)
     return `${m.baseSymbol} ${pos.size > 0n ? "L" : "S"} ${move >= 0 ? "+" : ""}${move.toFixed(3)}%`
   }).join(" | ")
-  log(`health=${h.marginStatus} equity/MM=${ratio === Infinity ? "inf" : ratio.toFixed(2)}x  ${summary || "no positions"}`)
-
+  // log only when the position set / health bucket changes, plus a periodic heartbeat
+  const stateKey = h.marginStatus + "|" + positions.map(({ m, pos }) => `${m.baseSymbol}:${pos.size}`).join(",")
   const now = Date.now()
+  if (stateKey !== lastStateKey || now - lastStatusAt >= HEARTBEAT_MIN * 60_000 || ONCE) {
+    log(`health=${h.marginStatus} equity/MM=${ratio === Infinity ? "inf" : ratio.toFixed(2)}x  ${summary || "no positions"}`)
+    lastStateKey = stateKey
+    lastStatusAt = now
+  }
+
+  // announce newly guarded positions and positions that went away
+  const seen = new Set()
+  for (const { m, pos } of positions) {
+    const key = `${pos.size > 0n ? "L" : "S"}:${pos.size}`
+    seen.add(m.poolAddress)
+    if (watching.get(m.poolAddress) === key) continue
+    const isNew = !watching.has(m.poolAddress)
+    watching.set(m.poolAddress, key)
+    const { entry, sl, tp } = triggers(m, pos)
+    const f = (p) => (p === null ? "off" : p.toFixed(m.quoteDecimals > 0 ? 2 : 0))
+    const line = `${m.baseSymbol}-PERP ${pos.size > 0n ? "LONG" : "SHORT"} ${num(abs(pos.size), m.baseDecimals)} @ ${entry.toFixed(2)} | SL ${f(sl)} | TP ${f(tp)} | health brake < ${MIN_HEALTH}x`
+    log(`${isNew ? "NOW GUARDING" : "POSITION CHANGED"} ${line}`)
+    if (!ONCE) await notify(`${isNew ? "👀 Now guarding" : "🔄 Position changed"}: ${line}`)
+  }
+  for (const pool of [...watching.keys()]) {
+    if (seen.has(pool)) continue
+    const m = perps.find((x) => x.poolAddress === pool)
+    watching.delete(pool)
+    log(`STOPPED GUARDING ${m?.baseSymbol}-PERP (position closed)`)
+    if (!ONCE) await notify(`✋ Stopped guarding ${m?.baseSymbol}-PERP: position closed`)
+  }
+
   const ready = positions.filter((p) => (cooldown.get(p.m.poolAddress) ?? 0) <= now)
 
   // 1. account health: reduce the biggest position
@@ -176,8 +217,8 @@ async function check() {
 }
 
 // ---------- main loop ----------
-log(`start: owner=${OWNER} bot=${account.address} mode=${LIVE ? "LIVE" : "DRY RUN"} SL=${SL_PCT || "off"}% TP=${TP_PCT || "off"}% minHealth=${MIN_HEALTH}x reduce=${REDUCE_FRACTION * 100}% every ${INTERVAL_SEC}s`)
-await notify(`started (${LIVE ? "LIVE" : "dry run"}) - watching ${OWNER.slice(0, 6)}...${OWNER.slice(-4)}\nSL ${SL_PCT || "off"}% / TP ${TP_PCT || "off"}% / health < ${MIN_HEALTH}x -> reduce ${REDUCE_FRACTION * 100}%`)
+log(`start: owner=${OWNER} bot=${account.address} mode=${LIVE ? "LIVE" : "DRY RUN"} SL=${SL_PCT ? SL_PCT + "%" : "off"} TP=${TP_PCT ? TP_PCT + "%" : "off"} minHealth=${MIN_HEALTH}x reduce=${REDUCE_FRACTION * 100}% every ${INTERVAL_SEC}s`)
+await notify(`started (${LIVE ? "LIVE" : "dry run"}) - watching ${OWNER.slice(0, 6)}...${OWNER.slice(-4)}\nSL ${SL_PCT ? SL_PCT + "%" : "off"} / TP ${TP_PCT ? TP_PCT + "%" : "off"} / health < ${MIN_HEALTH}x -> reduce ${REDUCE_FRACTION * 100}%`)
 for (;;) {
   try { await check() } catch (e) { log(`check error: ${e.shortMessage || e.message}`) }
   if (ONCE) process.exit(0)

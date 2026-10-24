@@ -20,6 +20,7 @@ Built for the **dreamDEX Perps Builder Bounty** (Feedback + MVP tracks).
 | Bot places a perp order **for** the linked wallet (`placeOrderFor`) | ✅ `order_for.mjs` |
 | Bot cancels the linked wallet's resting order (`cancelOrderFor`) | ✅ `cancel_for.mjs` |
 | **Position Guard**: watches a manual position and auto-closes it on stop-loss | ✅ `guard.mjs` |
+| **Position Guard**: health brake reduces the largest of several positions by 50% | ✅ `guard.mjs` |
 | Bot claims its own paper USDso voucher | ❌ reverts - see [feedback/](feedback/) |
 
 ### First live order on testnet
@@ -41,6 +42,33 @@ Built for the **dreamDEX Perps Builder Bounty** (Feedback + MVP tracks).
    status=success events=OpenInterestUpdated,OrderFilled,OrderPlaced
    ```
 4. Tx: [`0x57884a8d…41cc1b`](https://explorer.testnet.somnia.network/tokyo/tx/0x57884a8d041500b7704049adfd51a22d17dd8b8335fd6871cf8a2ab72341cc1b) — position fully closed, Discord alert sent.
+
+### Health brake on two positions (live)
+
+1. Opened BTC-PERP LONG 0.00123 and ETH-PERP LONG 0.0209 by hand. The running guard announced both on Discord:
+   `👀 Now guarding: BTC-PERP LONG 0.00123 @ 80882.50 | SL 79264.85 | TP off | health brake < 1.5x`
+2. Forced the brake with a test threshold: `GUARD_SL_PCT=0 GUARD_MIN_HEALTH=1000 node guard.mjs --live --once`
+3. Guard log:
+   ```
+   health=Healthy equity/MM=268.59x  ETH L -0.113% | BTC L -0.244%
+   SENT BTC-PERP SELL 0.00061 @ <= 80281.8 (50% of position) - account health 268.59x < 1000x
+   status=success events=OpenInterestUpdated,OrderFilled,OrderPlaced
+   ```
+   It picked the **largest** position (BTC ~99 USDso vs ETH ~50 USDso) and sold half, rounded down to the lot size.
+4. Tx: [`0x185d212b…4a9f85a`](https://explorer.testnet.somnia.network/tokyo/tx/0x185d212b5bcfece829a4ad961dd720b5f102e9550c3b32faf2d6799cf4a9f85a). The always-on guard then reported
+   `🔄 Position changed: BTC-PERP LONG 0.00062`.
+
+## Alerts
+
+| Alert | When |
+|---|---|
+| 👀 Now guarding | a new position appears (shows entry, SL / TP trigger prices, health brake) |
+| 🔄 Position changed | the size changes (partial close, add) |
+| ✅ Closed / Would close | the guard sent (or, in dry run, would send) a closing order, with the explorer link |
+| ⚠️ Could not close | the simulation reverted - nothing was sent, reason included |
+| ✋ Stopped guarding | the position is gone |
+
+The log only writes when the position set or health bucket changes, plus a heartbeat every `GUARD_HEARTBEAT_MIN` (10) minutes.
 
 ## How the guard decides
 
