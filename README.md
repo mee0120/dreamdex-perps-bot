@@ -18,6 +18,7 @@ Built for the **dreamDEX Perps Builder Bounty** (Feedback + MVP tracks).
 | Read all 21 perp markets (mark, funding, OI, tick/lot sizes) | ✅ `check.mjs` |
 | Bot key generated server-side, linked to an app wallet via **Link a bot** | ✅ `keygen.mjs` |
 | Bot places a perp order **for** the linked wallet (`placeOrderFor`) | ✅ `order_for.mjs` |
+| Bot cancels the linked wallet's resting order (`cancelOrderFor`) | ✅ `cancel_for.mjs` |
 | **Position Guard**: watches a manual position and auto-closes it on stop-loss | ✅ `guard.mjs` |
 | Bot claims its own paper USDso voucher | ❌ reverts - see [feedback/](feedback/) |
 
@@ -86,6 +87,7 @@ then sends with a 10M gas limit and decodes `OrderPlaced` / `OrderRested` from t
 | 3 | [Revert reasons cannot be decoded: node refuses historical eth_call](feedback/03-revert-decode-historical-state.md) | major | SDK |
 | 4 | [Voucher eligibility says `eligible: true` but `claim()` reverts with unknown selector 0x3e31dcc2](feedback/04-voucher-eligible-but-claim-reverts.md) | major | SDK |
 | 5 | [Docs say leverage can't be changed while the voucher remains, but it can](feedback/05-docs-voucher-leverage-locked.md) | normal | docs |
+| 6 | [SDK has no perp operator methods/ABI for linked bots; cancelOrderFor is undocumented](feedback/06-sdk-no-perp-operator-methods.md) | normal | SDK |
 
 ## Safety
 
