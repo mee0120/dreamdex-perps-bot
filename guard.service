@@ -1,0 +1,16 @@
+[Unit]
+Description=dreamDEX Position Guard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/dreamdex
+ExecStart=/usr/bin/node /root/dreamdex/guard.mjs --live
+Restart=always
+RestartSec=10
+# keep memory small on a 1 GB VPS
+MemoryMax=200M
+
+[Install]
+WantedBy=multi-user.target

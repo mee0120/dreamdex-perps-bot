@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Bot experiments on dreamDEX perps (Somnia Hideki testnet) with @somnia-chain/markets-sdk",
+  "description": "Position Guard for dreamDEX perps (Somnia testnet): auto stop-loss / take-profit / health brake via a linked bot",
   "scripts": {
     "markets": "node check.mjs",
     "balance": "node balance.mjs",
     "order:dry": "node order_for.mjs",
     "order": "node order_for.mjs --send",
-    "diag:voucher": "node diag_voucher.mjs"
+    "diag:voucher": "node diag_voucher.mjs",
+    "guard:status": "node guard_status.mjs",
+    "guard:dry": "node guard.mjs",
+    "guard": "node guard.mjs --live"
   },
   "dependencies": {
     "@somnia-chain/markets-sdk": "0.32.1",
