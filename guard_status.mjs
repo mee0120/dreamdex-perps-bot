@@ -45,7 +45,7 @@ for (const m of perps) {
   const side = pos.size > 0n ? "LONG " : "SHORT"
   const a = await markets.client.getPerpPositionAnalytics(ref)
   const liq = await markets.client.getLiquidationPrice(ref)
-  const mark = a.priceable ? a.markPrice : BigInt(m.markPrice ?? 0)
+  const mark = a.priceable ? a.markPrice : (await markets.client.getPerpState(m.poolAddress)).markPrice
   const abs = pos.size < 0n ? -pos.size : pos.size
   console.log(`\n${m.baseSymbol}-PERP ${side} ${fmt(abs, m.baseDecimals, 6)} ${m.baseSymbol}`)
   console.log(`  entry=${fmt(pos.avgEntryPrice, m.quoteDecimals, 2)} mark=${fmt(mark, m.quoteDecimals, 2)} liq=${fmt(liq, m.quoteDecimals, 2)}`)

@@ -61,7 +61,10 @@ console.log("owner:", owner)
 
 const m = (await markets.client.listPerpMarkets()).find((x) => x.baseSymbol === SYMBOL)
 if (!m) throw new Error(`market ${SYMBOL} not found`)
-const mark = big(m.markPrice) ?? big(m.lastPrice)
+// live mark from the chain - the market row's markPrice only advances at hourly funding settlement
+const st = await markets.client.getPerpState(m.poolAddress)
+if (!st.markPriceOk) throw new Error("mark feed stale - retry later")
+const mark = st.markPrice
 const price = floorTo((mark * BigInt(Math.round(DISCOUNT * 1000))) / 1000n, big(m.tickSize) ?? 0n)
 const quantity = ceilTo(big(m.minQuantity) ?? 0n, big(m.lotSize) ?? 0n)
 console.log(`${SYMBOL}-PERP pool=${m.poolAddress}`)
