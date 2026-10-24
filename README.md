@@ -83,6 +83,9 @@ So all three rules - stop-loss, health brake, take-profit - have closed real tes
 | ⚠️ Could not close | the simulation reverted - nothing was sent, reason included |
 | ✋ Stopped guarding | the position is gone |
 
+Both channels are verified live: Discord via webhook, Telegram via a bot (`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`) -
+the same "Now guarding" alert arrives on a phone within one check interval.
+
 The log only writes when the position set or health bucket changes, plus a heartbeat every `GUARD_HEARTBEAT_MIN` (10) minutes.
 
 ## How the guard decides
