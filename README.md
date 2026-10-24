@@ -21,6 +21,7 @@ Built for the **dreamDEX Perps Builder Bounty** (Feedback + MVP tracks).
 | Bot cancels the linked wallet's resting order (`cancelOrderFor`) | ✅ `cancel_for.mjs` |
 | **Position Guard**: watches a manual position and auto-closes it on stop-loss | ✅ `guard.mjs` |
 | **Position Guard**: health brake reduces the largest of several positions by 50% | ✅ `guard.mjs` |
+| **Position Guard**: take-profit closes a SHORT (buy-back) | ✅ `guard.mjs` |
 | Bot claims its own paper USDso voucher | ❌ reverts - see [feedback/](feedback/) |
 
 ### First live order on testnet
@@ -57,6 +58,20 @@ Built for the **dreamDEX Perps Builder Bounty** (Feedback + MVP tracks).
    It picked the **largest** position (BTC ~99 USDso vs ETH ~50 USDso) and sold half, rounded down to the lot size.
 4. Tx: [`0x185d212b…4a9f85a`](https://explorer.testnet.somnia.network/tokyo/tx/0x185d212b5bcfece829a4ad961dd720b5f102e9550c3b32faf2d6799cf4a9f85a). The always-on guard then reported
    `🔄 Position changed: BTC-PERP LONG 0.00062`.
+
+### Take-profit on a short (live)
+
+Three positions guarded at once (SOL SHORT, ETH LONG, BTC LONG); the short reached the TP first and was bought back:
+```
+health=Healthy equity/MM=267.28x  SOL S +0.119% | ETH L -0.110% | BTC L -0.223%
+NOW GUARDING SOL-PERP SHORT 0.49 @ 102.09 | SL off | TP 102.07 | health brake < 1.5x
+SENT SOL-PERP BUY 0.49 @ <= 102.48 (100% of position) - take-profit +0.119% >= 0.02%
+status=success events=OpenInterestUpdated,OrderFilled,OrderPlaced
+STOPPED GUARDING SOL-PERP (position closed)
+```
+Tx: [`0x18d9b73f…85c9253`](https://explorer.testnet.somnia.network/tokyo/tx/0x18d9b73f69480e596e5c60e5436eab0d1022645324e656305608bb5c785c9253)
+
+So all three rules - stop-loss, health brake, take-profit - have closed real testnet positions, on both long and short.
 
 ## Alerts
 
