@@ -85,6 +85,7 @@ then sends with a 10M gas limit and decodes `OrderPlaced` / `OrderRested` from t
 | 2 | [SDK reports "account does not exist" as "claim reverted: Missing or invalid parameters"](feedback/02-sdk-misleading-no-gas-error.md) | normal | SDK |
 | 3 | [Revert reasons cannot be decoded: node refuses historical eth_call](feedback/03-revert-decode-historical-state.md) | major | SDK |
 | 4 | [Voucher eligibility says `eligible: true` but `claim()` reverts with unknown selector 0x3e31dcc2](feedback/04-voucher-eligible-but-claim-reverts.md) | major | SDK |
+| 5 | [Docs say leverage can't be changed while the voucher remains, but it can](feedback/05-docs-voucher-leverage-locked.md) | normal | docs |
 
 ## Safety
 
