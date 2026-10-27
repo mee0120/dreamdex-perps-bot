@@ -20,6 +20,7 @@ Built for the **dreamDEX Perps Builder Bounty** (Feedback + MVP tracks).
 | Bot places a perp order **for** the linked wallet (`placeOrderFor`) | ✅ `order_for.mjs` |
 | Bot cancels the linked wallet's resting order (`cancelOrderFor`) | ✅ `cancel_for.mjs` |
 | **Position Guard**: watches a manual position and auto-closes it on stop-loss | ✅ `guard.mjs` |
+| **Position Guard**: unattended 2% stop-losses closed ETH and BTC during a real market drop | ✅ `guard.mjs` |
 | **Position Guard**: health brake reduces the largest of several positions by 50% | ✅ `guard.mjs` |
 | **Position Guard**: take-profit closes a SHORT (buy-back) | ✅ `guard.mjs` |
 | Bot claims its own paper USDso voucher | ❌ reverts - see [feedback/](feedback/) |
@@ -72,6 +73,26 @@ STOPPED GUARDING SOL-PERP (position closed)
 Tx: [`0x18d9b73f…85c9253`](https://explorer.testnet.somnia.network/tokyo/tx/0x18d9b73f69480e596e5c60e5436eab0d1022645324e656305608bb5c785c9253)
 
 So all three rules - stop-loss, health brake, take-profit - have closed real testnet positions, on both long and short.
+
+### Unattended stop-losses with real thresholds (live)
+
+The tests above used tiny test thresholds. After them, the leftover ETH and BTC longs were left open with
+the guard running unattended on production-style settings (`GUARD_SL_PCT=2`). The market fell and the guard closed
+both on its own, about an hour apart, with nobody watching:
+
+```
+[2026-10-24 14:18:29 UTC] SENT ETH-PERP SELL 0.0209 @ <= 2318.87 (100% of position) - stop-loss -2.023% <= -2%
+                          status=success events=OpenInterestUpdated,OrderFilled,OrderPlaced
+[2026-10-24 15:19:44 UTC] SENT BTC-PERP SELL 0.00062 @ <= 78827.5 (100% of position) - stop-loss -2.051% <= -2%
+                          status=success events=OpenInterestUpdated,OrderFilled,OrderPlaced
+```
+
+- ETH: [`0x810eb754…16742b4`](https://explorer.testnet.somnia.network/tokyo/tx/0x810eb75445584bc43b485b474fdc2269a3efeda784ffe496288035c8b16742b4)
+- BTC: [`0x0cbabc3d…8f0bd`](https://explorer.testnet.somnia.network/tokyo/tx/0x0cbabc3d84390cc721570baf05d2123b799c24e001f6fc869f90e0cf18d5f0bd)
+
+Both fired within ~0.05% of the 2% trigger, so a 15 s check interval is enough to keep the realized loss
+close to the configured stop. The same process has been running since 2026-10-24 and still writes a heartbeat every 10 minutes
+(`health=Healthy ... no positions`), so the account stays guarded even while flat.
 
 ## Alerts
 
