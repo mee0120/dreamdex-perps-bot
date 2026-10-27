@@ -11,6 +11,26 @@ Bot experiments on **dreamDEX perps** (Somnia **Hideki** testnet, chain ID 50383
 
 Built for the **dreamDEX Perps Builder Bounty** (Feedback + MVP tracks).
 
+## Concept
+
+**Who it is for:** traders who open perps by hand in the dreamDEX app (or on a phone) and cannot watch the screen all day.
+
+**The problem:** on dreamDEX a bot linked with **Link a bot** can place, cancel and reduce orders, but it cannot arm stop orders on the exchange.
+The Builder Session (Oct 27) put it plainly: with a trading key, take-profit and stop-loss "are watched by the bot, not armed on the exchange"
+and "act only while the bot runs". So a manual position has no protection unless something keeps watching it.
+
+**What Position Guard adds:** a watcher that is always on and protects positions *you* opened, in every market at once:
+
+- stop-loss and take-profit per position, closed with an IOC order through the book (never flips the position)
+- an account-health brake that halves the largest position before maintenance margin is reached
+- Discord and Telegram alerts when it starts guarding, when a position changes, and when it closes or cannot close
+
+The official dreamBot templates set TP/SL for the bot's *own* trades. Position Guard is the other half: it guards what a human opened.
+
+**Core loop:** open a position in the app -> the guard announces "Now guarding" with the trigger prices -> it closes on SL, TP or the health brake -> you get the alert and the tx link -> open the next trade. Nothing to configure per trade.
+
+**Why it spreads:** every perps trader has been liquidated or stopped out while away from the screen. The guard is one process, one `.env` and a linked bot key that cannot withdraw funds, so it is easy to share and safe to try.
+
 ## Status
 
 | Step | Result |
@@ -20,9 +40,9 @@ Built for the **dreamDEX Perps Builder Bounty** (Feedback + MVP tracks).
 | Bot places a perp order **for** the linked wallet (`placeOrderFor`) | ✅ `order_for.mjs` |
 | Bot cancels the linked wallet's resting order (`cancelOrderFor`) | ✅ `cancel_for.mjs` |
 | **Position Guard**: watches a manual position and auto-closes it on stop-loss | ✅ `guard.mjs` |
-| **Position Guard**: unattended 2% stop-losses closed ETH and BTC during a real market drop | ✅ `guard.mjs` |
 | **Position Guard**: health brake reduces the largest of several positions by 50% | ✅ `guard.mjs` |
 | **Position Guard**: take-profit closes a SHORT (buy-back) | ✅ `guard.mjs` |
+| **Position Guard**: unattended 2% stop-losses closed ETH and BTC during a real market drop | ✅ `guard.mjs` |
 | Bot claims its own paper USDso voucher | ❌ reverts - see [feedback/](feedback/) |
 
 ### First live order on testnet
@@ -149,12 +169,14 @@ then sends with a 10M gas limit and decodes `OrderPlaced` / `OrderRested` from t
 
 | # | Title | Severity | Area |
 |---|---|---|---|
-| 1 | [App "Send" to a bot address silently withdraws to Shannon, not Hideki](feedback/01-send-goes-to-shannon.md) | major | app |
-| 2 | [SDK reports "account does not exist" as "claim reverted: Missing or invalid parameters"](feedback/02-sdk-misleading-no-gas-error.md) | normal | SDK |
-| 3 | [Revert reasons cannot be decoded: node refuses historical eth_call](feedback/03-revert-decode-historical-state.md) | major | SDK |
-| 4 | [Voucher eligibility says `eligible: true` but `claim()` reverts with unknown selector 0x3e31dcc2](feedback/04-voucher-eligible-but-claim-reverts.md) | major | SDK |
-| 5 | [Docs say leverage can't be changed while the voucher remains, but it can](feedback/05-docs-voucher-leverage-locked.md) | normal | docs |
-| 6 | [SDK has no perp operator methods/ABI for linked bots; cancelOrderFor is undocumented](feedback/06-sdk-no-perp-operator-methods.md) | normal | SDK |
+| 1 | [[App] Wallet "Send" never shows the destination network: STT sent to a bot lands on Shannon, not Tokyo](feedback/01-send-goes-to-shannon.md) | normal | app |
+| 2 | [[SDK] A send from an account with no gas surfaces as "claim reverted: Missing or invalid parameters"](feedback/02-sdk-misleading-no-gas-error.md) | normal | SDK |
+| 4 | [[SDK / Contracts] getPerpVoucherEligibility says eligible: true, but claim() reverts with unknown error 0x3e31dcc2](feedback/04-voucher-eligible-but-claim-reverts.md) | major | SDK / contracts |
+| 5 | [[Docs] Leverage can be changed while the paper USDso voucher remains, unlike the docs say](feedback/05-docs-voucher-leverage-locked.md) | normal | docs |
+| 6 | [[SDK] No perp operator methods or ABI for linked bots; cancelOrderFor is undocumented](feedback/06-sdk-no-perp-operator-methods.md) | normal | SDK |
+
+#3 (historical `eth_call` refused by the node) was withdrawn on Oct 27: the replay at the parent block works now, so it no longer reproduces.
+
 
 ## Safety
 
