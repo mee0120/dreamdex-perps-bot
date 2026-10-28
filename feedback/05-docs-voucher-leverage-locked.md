@@ -1,4 +1,4 @@
-# Docs say leverage can't be changed while the paper USDso voucher remains, but it can (both down and up)
+# [Docs] "Leverage can't be changed while the paper USDso voucher remains" is wrong: it can be changed both down and up
 
 Severity: normal
 Area: docs
@@ -34,4 +34,4 @@ leverage cap (currently 20x). You can still lower or raise your own setting with
 `node leverage_check.mjs` output at both times (above). Wallet `0xbECd3f4f8Fe8a0A69AC7c04c193aB49a47375c2b`, voucher expiresAt 2026-11-07.
 
 ## Environment
-app.testnet.dreamdex.io, @somnia-chain/markets-sdk 0.32.1, Hideki testnet (50383), 2026-10-24.
+Somnia Tokyo testnet (50383). app.testnet.dreamdex.io, @somnia-chain/markets-sdk 0.32.1, Hideki testnet (50383), 2026-10-24.
